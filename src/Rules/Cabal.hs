@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Rules.Cabal (cabalRules) where
 
 import Data.Version
@@ -36,7 +37,12 @@ cabalRules = do
                 need [pkgCabalFile pkg]
                 pd <- liftIO . readPackageDescription silent $ pkgCabalFile pkg
                 -- TODO: Support more than one Cabal library per package.
-                let depsLib  = collectDeps . fmap snd . listToMaybe $ condLibraries pd
+                let
+#if MIN_VERSION_Cabal(1, 25, 0)
+                    depsLib  = collectDeps . condLibrary $ pd
+#else
+                    depsLib  = collectDeps . fmap snd . listToMaybe $ condLibraries pd
+#endif
                     depsExes = map (collectDeps . Just . snd) $ condExecutables pd
                     deps     = concat $ depsLib : depsExes
                     depNames = [ name | Dependency (DP.PackageName name) _ <- deps ]
